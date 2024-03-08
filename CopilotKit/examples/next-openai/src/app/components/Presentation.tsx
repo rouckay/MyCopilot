@@ -15,6 +15,7 @@ import {
 import { resetGlobalAudio, speak } from "../utils";
 import { ActionButton } from "./ActionButton";
 import { SlideModel, Slide } from "./Slide";
+import { PreviewSlide } from "./Preview";
 
 export const Presentation = ({ chatInProgress }: { chatInProgress: boolean }) => {
   const [slides, setSlides] = useState<SlideModel[]>([
@@ -68,8 +69,18 @@ export const Presentation = ({ chatInProgress }: { chatInProgress: boolean }) =>
       };
 
       setSlides((slides) => [...slides, newSlide]);
+      setCurrentSlideIndex((i) => slides.length);
     },
-    render: "Adding slide...",
+    render: ({ args, status }) => {
+      return (
+        <PreviewSlide
+          title={args.title}
+          content={args.content}
+          spokenNarration={args.spokenNarration}
+          done={status === "complete"}
+        />
+      );
+    },
   });
 
   const context = useCopilotContext();

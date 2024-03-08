@@ -109,11 +109,20 @@ export const Messages = ({ messages, inProgress }: MessagesProps) => {
                 });
 
                 if (typeof result === "string") {
-                  return (
-                    <div key={index} className={`copilotKitMessage copilotKitAssistantMessage`}>
-                      {isCurrentMessage && inProgress && context.icons.spinnerIcon} {result}
-                    </div>
-                  );
+                  if (isCurrentMessage && inProgress) {
+                    return (
+                      <div key={index} className={`copilotKitMessage copilotKitAssistantMessage`}>
+                        {context.icons.spinnerIcon}
+                        <span className="inProgressLabel">{result}</span>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div key={index} className={`copilotKitMessage copilotKitAssistantMessage`}>
+                        {result}
+                      </div>
+                    );
+                  }
                 } else {
                   return (
                     <div key={index} className="copilotKitCustomAssistantMessage">
