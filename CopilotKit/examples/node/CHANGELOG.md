@@ -1,5 +1,17 @@
 # node
 
+## 1.19.0
+
+### Minor Changes
+
+- 899aa6e: Backend improvements for running on GCP
+
+### Patch Changes
+
+- Updated dependencies [899aa6e]
+  - @copilotkit/backend@0.7.0
+  - @copilotkit/shared@0.7.0
+
 ## 1.19.0-mme-firebase-fixes.0
 
 ### Minor Changes
