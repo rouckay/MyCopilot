@@ -1,6 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { CopilotChatIcons, ChatContextProvider, CopilotChatLabels } from "./ChatContext";
-import { SystemMessageFunction, useCopilotChat } from "@copilotkit/react-core";
+import {
+  SystemMessageFunction,
+  extract,
+  useCopilotChat,
+  useCopilotContext,
+} from "@copilotkit/react-core";
 import {
   ButtonProps,
   HeaderProps,
@@ -8,6 +13,7 @@ import {
   MessagesProps,
   InputProps,
   ResponseButtonProps,
+  SuggestionsProps,
 } from "./props";
 import { Window as DefaultWindow } from "./Window";
 import { Button as DefaultButton } from "./Button";
@@ -16,6 +22,7 @@ import { Messages as DefaultMessages } from "./Messages";
 import { Input as DefaultInput } from "./Input";
 import { nanoid } from "nanoid";
 import { ResponseButton as DefaultResponseButton } from "./Response";
+import { Suggestion, reloadSuggestions } from "./Suggestion";
 
 /**
  * Props for CopilotChat component.
@@ -90,6 +97,17 @@ export interface CopilotChatProps {
   makeSystemMessage?: SystemMessageFunction;
 
   /**
+   * The initial suggestions to show in the chat window.
+   */
+  initialSuggestions?: { title: string; message: string }[];
+
+  /**
+   * Whether to auto suggest messages based on the user's input.
+   * @default true
+   */
+  autoSuggest?: boolean;
+
+  /**
    * Whether to show the response button.
    * @default true
    */
@@ -147,6 +165,8 @@ export const CopilotChat = ({
   icons,
   labels,
   makeSystemMessage,
+  initialSuggestions,
+  autoSuggest,
   showResponseButton = true,
   onInProgress,
   Window = DefaultWindow,
@@ -164,9 +184,32 @@ export const CopilotChat = ({
     additionalInstructions: instructions,
   });
 
+  const [currentSuggestions, setCurrentSuggestions] = React.useState<
+    {
+      title: string;
+      message: string;
+      partial?: boolean;
+    }[]
+  >(initialSuggestions || []);
+  const suggestionsAbortControllerRef = useRef<AbortController>(new AbortController());
+
+  const abortSuggestions = () => {
+    suggestionsAbortControllerRef.current?.abort();
+    suggestionsAbortControllerRef.current = new AbortController();
+  };
+
+  const context = useCopilotContext();
+
   useEffect(() => {
     onInProgress?.(isLoading);
-  }, [isLoading]);
+    if (!isLoading && autoSuggest && currentSuggestions.length === 0) {
+      reloadSuggestions(
+        context,
+        setCurrentSuggestions,
+        suggestionsAbortControllerRef.current.signal,
+      );
+    }
+  }, [isLoading, autoSuggest]);
 
   const [openState, setOpenState] = React.useState(defaultOpen);
 
@@ -176,6 +219,8 @@ export const CopilotChat = ({
   };
 
   const sendMessage = async (message: string) => {
+    abortSuggestions();
+    setCurrentSuggestions([]);
     onSubmitMessage?.(message);
     append({
       id: nanoid(),
@@ -197,12 +242,28 @@ export const CopilotChat = ({
           hitEscapeToClose={hitEscapeToClose}
         >
           <Header open={openState} setOpen={setOpen} />
-          <Messages messages={visibleMessages} inProgress={isLoading} />
-          <Input inProgress={isLoading} onSend={sendMessage} isVisible={openState}>
+          <Messages messages={visibleMessages} inProgress={isLoading}>
+            {currentSuggestions.length > 0 && (
+              <div>
+                <h6>Suggested:</h6>
+                <div className="suggestions">
+                  {currentSuggestions.map((suggestion, index) => (
+                    <Suggestion
+                      key={index}
+                      title={suggestion.title}
+                      message={suggestion.message}
+                      partial={suggestion.partial}
+                      onClick={(message) => sendMessage(message)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {showResponseButton && visibleMessages.length > 0 && (
               <ResponseButton onClick={isLoading ? stop : reload} inProgress={isLoading} />
             )}
-          </Input>
+          </Messages>
+          <Input inProgress={isLoading} onSend={sendMessage} isVisible={openState} />
         </Window>
       </div>
     </ChatContextProvider>
