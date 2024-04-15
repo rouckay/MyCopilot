@@ -40,6 +40,14 @@ export class OpenAIAdapter implements CopilotKitServiceAdapter {
       maxTokensForOpenAIModel(forwardedProps.model || this.model),
     );
 
+    // remove message.function_call.scope if it's present.
+    // scope is a field we inject as a temporary workaround (see elsewhere), which openai doesn't understand
+    messages.forEach((message) => {
+      if (message.function_call?.scope) {
+        delete message.function_call.scope;
+      }
+    });
+
     const stream = this.openai.beta.chat.completions
       .stream({
         model: this.model,
